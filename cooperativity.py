@@ -3,10 +3,11 @@ import random
 import math
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
-import os 
+import os
+import numpy as np
 
 def metabolicAgeFactor(age):
-    return age/20
+    return 0
 
 def find_index(data_list, value):
     for index, tuple_data in enumerate(data_list):
@@ -34,7 +35,7 @@ def generate_network(n, k, alpha):
         # Calculate mean degree
         mean_degree = k
 
-        # Randomly set numberOfLinks for n[i] such that mean degree is k
+        # Randomly set number_of_links for n[i] such that mean degree is k
         number_of_links = random.randint(0, mean_degree*2)
 
         # Create links
@@ -113,7 +114,7 @@ def public_goods_game(network, rewire_p, r):
                 list(fresh_network.nodes(data=True))[neighbor][1]['mass'] += contribution_per_neighbor
 
         if node[1]['mass'] <= 0:
-            nodes_to_cut.append(node_id)
+            nodes_to_cut.append((node_id, node[1]['age']))
             
         
         
@@ -146,13 +147,13 @@ def public_goods_game(network, rewire_p, r):
 
     # Remove nodes from the network and update worst_links
     print(f"Nodes {nodes_to_cut} are dying")
-    for nid in nodes_to_cut:
+    for nid, age in nodes_to_cut:
         fresh_network.remove_node(nid)
         if nid in worst_links:
             del worst_links[nid]
 
 
-    return fresh_network
+    return fresh_network, nodes_to_cut
 
             
 
@@ -176,6 +177,10 @@ def rewire_links(network, node_id, worst_link):
 def remove_node(network, node_id):
     fresh_network = network.remove_node(node_id)
     return fresh_network
+
+def range_from_list(lst):
+    return list(range(lst[0], lst[1] + 1))
+
 
 
 
@@ -222,6 +227,11 @@ avgDegree = 3
 num_rounds = 20
 game_network = generate_network(n, avgDegree, alpha)
 
+initial_network = game_network.copy()
+
+lifespan_by_contribution = {0: [], 0.25: [], 0.5: [], 0.75: [], 1.0: []}
+
+
 fig, ax = plt.subplots()
 
 output_dir = 'frames'
@@ -233,13 +243,21 @@ plt.savefig(os.path.join(output_dir, 'frame_0.png'))
 
 all_dead = False
 
+print(f"Playing with rewiring probability {rewire_probability} and enhancement factor {enhancement_factor}")
+
+
 for round in range(num_rounds):
     print(f'Playing round {round+1}')
 
     ax.clear()
 
-    result = public_goods_game(game_network, rewire_probability, enhancement_factor)
-    # print(result.edges)
+    result, dead_nodes = public_goods_game(game_network, rewire_probability, enhancement_factor)
+
+    for node_id, age in dead_nodes:
+        if node_id < (n-1):
+            initial_contribution = initial_network.nodes[node_id]['contribution']
+        lifespan_by_contribution[initial_contribution].append(age)
+    
     print(f'Number of players = {result.number_of_nodes()}')
     totalM = 0
     totalC = 0
@@ -249,10 +267,11 @@ for round in range(num_rounds):
         contri = node[1]['contribution']
         mass = node[1]['mass']
         age = node[1]['age']
-        # print(f"Node {node_id}: Contribution = {contri}, Mass = {mass}")
+        
         totalM += mass
         totalC += contri
         totalA += age
+
 
     if result.number_of_nodes() <= 0:
         print("All nodes died")
@@ -285,5 +304,18 @@ else:
 with imageio.get_writer(os.path.join(output_dir, 'graph_animation.gif'), mode='I', duration=0.5) as writer:
     for image in images:
         writer.append_data(imageio.imread(image))
+
+
+print('\n')
+
+print("Final Results")
+
+print(f"Rewiring probability {rewire_probability} and enhancement factor {enhancement_factor}")
+print('\n')
+
+for contribution, lifespans in lifespan_by_contribution.items():
+    if lifespans:
+        avg_lifespan = np.mean(lifespans)
+        print(f"Average lifespan for initial contribution {contribution}: {avg_lifespan}")
 
 
