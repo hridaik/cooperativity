@@ -256,7 +256,7 @@ for round in range(num_rounds):
     for node_id, age in dead_nodes:
         if node_id < (n-1):
             initial_contribution = initial_network.nodes[node_id]['contribution']
-        lifespan_by_contribution[initial_contribution].append(age)
+            lifespan_by_contribution[initial_contribution].append(age)
     
     print(f'Number of players = {result.number_of_nodes()}')
     totalM = 0
@@ -313,9 +313,13 @@ print("Final Results")
 print(f"Rewiring probability {rewire_probability} and enhancement factor {enhancement_factor}")
 print('\n')
 
-for contribution, lifespans in lifespan_by_contribution.items():
-    if lifespans:
-        avg_lifespan = np.mean(lifespans)
-        print(f"Average lifespan for initial contribution {contribution}: {avg_lifespan}")
+for node in game_network.nodes():
+    node_id = node[0]
+    if node_id < (n-1):
+        initial_contribution = initial_network.nodes[node_id]['contribution']
+        lifespan_by_contribution[initial_contribution].append(age)
 
+for contribution, lifespans in lifespan_by_contribution.items():
+    avg_lifespan = np.mean(lifespans)
+    print(f"Average lifespan for initial contribution {contribution}: {avg_lifespan}")
 
